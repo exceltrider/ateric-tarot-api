@@ -12,8 +12,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const authenticate = require('./middleware/auth');
 
-// Routes
-app.use('/auth', require('./routes/auth'));
+app.use('/auth', require('./routes/auth')); // tanpa autentikasi
 
 app.use('/services', authenticate, require('./routes/services'));
 app.use('/customers', authenticate, require('./routes/customers'));
