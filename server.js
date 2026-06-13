@@ -6,14 +6,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check root
+app.get('/', (req, res) => {
+    res.json({ status: 'OK', message: 'Ateric Tarot API is running' });
+});
+
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const authenticate = require('./middleware/auth');
 
-app.use('/auth', require('./routes/auth')); // tanpa autentikasi
-
+app.use('/auth', require('./routes/auth'));
 app.use('/services', authenticate, require('./routes/services'));
 app.use('/customers', authenticate, require('./routes/customers'));
 app.use('/orders', authenticate, require('./routes/orders'));
