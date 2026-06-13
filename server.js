@@ -24,7 +24,6 @@ app.use('/orders', authenticate, require('./routes/orders'));
 app.use('/statistics', authenticate, require('./routes/statistics'));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Ateric Tarot API berjalan di http://localhost:${PORT}`);
-    console.log(`Dokumentasi Swagger: http://localhost:${PORT}/api-docs`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Ateric Tarot API berjalan di port ${PORT}`);
 });
