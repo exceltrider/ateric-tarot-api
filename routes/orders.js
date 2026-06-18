@@ -38,9 +38,9 @@ router.get('/', async (req, res) => {
 
 /**
  * @swagger
- * /orders:
+ * /orders/public:
  *   post:
- *     summary: Membuat pesanan baru
+ *     summary: Membuat pesanan oleh customer publik (tanpa login)
  *     tags: [Orders]
  *     requestBody:
  *       required: true
@@ -49,8 +49,84 @@ router.get('/', async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               customer_id:
- *                 type: integer
+ *               name: string
+ *               email: string
+ *               phone: string
+ *               instagram: string
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     service_id: integer
+ *                     quantity: integer
+ *     responses:
+ *       201:
+ *         description: Pesanan berhasil dibuat
+ */
+router.post('/public', async (req, res) => {
+  const { name, email, phone, instagram, items } = req.body;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [existing] = await conn.query('SELECT id FROM customers WHERE email = ?', [email]);
+    let customer_id;
+    if (existing.length > 0) {
+      customer_id = existing[0].id;
+    } else {
+      const [result] = await conn.query(
+        'INSERT INTO customers (name, email, phone, instagram) VALUES (?, ?, ?, ?)',
+        [name, email, phone, instagram]
+      );
+      customer_id = result.insertId;
+    }
+
+    let total = 0;
+    for (let item of items) {
+      const [[service]] = await conn.query('SELECT price FROM services WHERE id = ?', [item.service_id]);
+      if (!service) throw new Error(`Service id ${item.service_id} tidak ditemukan`);
+      total += service.price * (item.quantity || 1);
+    }
+
+    const [orderResult] = await conn.query('INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)', [customer_id, total]);
+    const orderId = orderResult.insertId;
+
+    for (let item of items) {
+      const [[service]] = await conn.query('SELECT price FROM services WHERE id = ?', [item.service_id]);
+      const subtotal = service.price * (item.quantity || 1);
+      await conn.query(
+        'INSERT INTO order_items (order_id, service_id, quantity, subtotal) VALUES (?, ?, ?, ?)',
+        [orderId, item.service_id, item.quantity || 1, subtotal]
+      );
+    }
+
+    await conn.commit();
+    res.status(201).json({ order_id: orderId, total });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Membuat pesanan (hanya admin dengan customer_id)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               customer_id: integer
  *               items:
  *                 type: array
  *                 items:
@@ -96,6 +172,8 @@ router.post('/', async (req, res) => {
  *   put:
  *     summary: Mengubah status pesanan
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -107,9 +185,8 @@ router.post('/', async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               status:
- *                 type: string
- *                 enum: [pending, confirmed, done]
+ *               status: string
+ *               enum: [pending, confirmed, done]
  *     responses:
  *       200:
  *         description: Status berhasil diubah
@@ -125,6 +202,8 @@ router.put('/:id/status', async (req, res) => {
  *   delete:
  *     summary: Menghapus pesanan
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
