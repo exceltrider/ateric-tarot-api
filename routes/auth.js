@@ -8,7 +8,11 @@ const redis = require('../config/redis');
 const { JWT_SECRET, ACCESS_TOKEN_EXPIRES, REFRESH_TOKEN_EXPIRES } = require('../config/auth');
 
 router.post('/register', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, secret } = req.body;
+
+    if (secret !== process.env.REGISTER_SECRET) {
+        return res.status(403).json({ error: 'Akses ditolak: secret key tidak valid' });
+    }
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Username dan password wajib diisi' });
