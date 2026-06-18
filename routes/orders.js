@@ -13,17 +13,27 @@ const pool = require('../config/db');
  *         description: Daftar pesanan
  */
 router.get('/', async (req, res) => {
-  const [orders] = await pool.query('SELECT * FROM orders');
-  for (let order of orders) {
-    const [items] = await pool.query(
-      `SELECT oi.*, s.name AS service_name 
-       FROM order_items oi 
-       JOIN services s ON oi.service_id = s.id 
-       WHERE oi.order_id = ?`, [order.id]
-    );
-    order.items = items;
+  try {
+    const [orders] = await pool.query(`
+      SELECT o.*, c.name AS customer_name, c.email AS customer_email, c.instagram AS customer_instagram
+      FROM orders o
+      JOIN customers c ON o.customer_id = c.id
+      ORDER BY o.id DESC
+    `);
+    for (let order of orders) {
+      const [items] = await pool.query(
+        `SELECT oi.*, s.name AS service_name 
+         FROM order_items oi 
+         JOIN services s ON oi.service_id = s.id 
+         WHERE oi.order_id = ?`, [order.id]
+      );
+      order.items = items;
+    }
+    res.json(orders);
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+    res.status(500).json({ error: 'Gagal mengambil data pesanan' });
   }
-  res.json(orders);
 });
 
 /**
