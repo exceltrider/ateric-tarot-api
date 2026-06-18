@@ -15,7 +15,6 @@ const swaggerSpec = require('./swagger');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/auth', require('./routes/auth'));
-app.post('/orders/public', require('./routes/orders'));  // <-- ini wajib ada
 
 const authenticate = require('./middleware/auth');
 
@@ -23,6 +22,8 @@ app.use('/services', authenticate, require('./routes/services'));
 app.use('/customers', authenticate, require('./routes/customers'));
 app.use('/orders', authenticate, require('./routes/orders'));
 app.use('/statistics', authenticate, require('./routes/statistics'));
+
+app.post('/orders/public', require('./routes/orders'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
